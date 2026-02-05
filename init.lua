@@ -90,6 +90,7 @@ vim.opt.listchars = {
 vim.api.nvim_create_autocmd("FileType", {
 	pattern = { "lua", "go" },
 	callback = function()
+		vim.opt_local.expandtab = false
 		vim.opt_local.listchars:append({ tab = "  " })
 	end,
 })
@@ -213,6 +214,16 @@ require("lazy").setup({
 				},
 			})
 		end,
+	},
+	{
+		"nvim-treesitter/nvim-treesitter",
+		build = ":TSUpdate",
+		event = { "BufReadPost", "BufNewFile" },
+		opts = {
+			auto_install = true,
+			highlight = { enable = true },
+			indent = { enable = true },
+		},
 	},
 	{
 		"echasnovski/mini.pick",
