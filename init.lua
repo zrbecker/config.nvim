@@ -60,7 +60,7 @@ require("lazy").setup({
         lazy = false,
         priority = 1000,
         config = function()
-            vim.cmd.colorscheme("catppuccin-macchiato")
+            vim.cmd.colorscheme("catppuccin-mocha")
             vim.cmd.hi("Comment gui=none")
         end,
     },
@@ -81,48 +81,20 @@ require("lazy").setup({
         end,
     },
     {
-        "folke/lazydev.nvim",
-        ft = "lua",
-        opts = {
-            library = {
-                { path = "${3rd}/luv/library", words = { "vim%.uv" } },
-            },
-        },
-    },
-    {
         "neovim/nvim-lspconfig",
+        dependencies = {
+            "hrsh7th/nvim-cmp",
+            "hrsh7th/cmp-nvim-lsp",
+        },
         opts = {
             diagnostics = { virtual_text = false, underline = false },
             servers = {
-                gopls = {},
-                rust_analyzer = {
-                    settings = {
-                        ["rust-analyzer"] = {
-                            check = { command = "clippy" },
-                        },
-                    },
-                },
-                lua_ls = {
-                    settings = {
-                        Lua = {
-                            runtime = { version = "LuaJIT" },
-                            diagnostics = {
-                                globals = { "vim" },
-                            },
-                            workspace = {
-                                library = vim.api.nvim_get_runtime_file("", true),
-                                checkThirdParty = false,
-                            },
-                            telemetry = { enable = false },
-                        },
-                    },
-                },
+                -- gopls = {},
+                -- rust_analyzer = {},
+                lua_ls = {},
             },
         },
         config = function(_, opts)
-            local lspconfig = require("lspconfig")
-            local capabilities = require("cmp_nvim_lsp").default_capabilities()
-
             vim.diagnostic.config(opts.diagnostics)
             vim.api.nvim_create_autocmd("DiagnosticChanged", {
                 callback = function()
@@ -130,69 +102,62 @@ require("lazy").setup({
                 end,
             })
 
-            local function on_attach(_, bufnr)
-                vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = bufnr, desc = "Go to definition" })
-                vim.keymap.set("n", "gr", vim.lsp.buf.references, { buffer = bufnr, desc = "Find references" })
-                vim.keymap.set("n", "K", vim.lsp.buf.hover, { buffer = bufnr, desc = "Hover info" })
-                vim.keymap.set("n", "<leader>d", function()
-                    vim.diagnostic.open_float(nil, { focusable = true })
-                end, { buffer = bufnr, desc = "Show diagnostic" })
-
-                vim.api.nvim_create_autocmd("BufWritePre", {
-                    buffer = bufnr,
-                    callback = function()
-                        vim.lsp.buf.format({ bufnr = bufnr })
-                    end,
-                })
-            end
-
+            local capabilities = require("cmp_nvim_lsp").default_capabilities()
             for server, server_opts in pairs(opts.servers) do
                 server_opts.capabilities = capabilities
-                server_opts.on_attach = on_attach
-                lspconfig[server].setup(server_opts)
+                server_opts.on_attach = function(_, bufnr)
+                    vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = bufnr, desc = "Go to definition" })
+                    vim.keymap.set("n", "gr", vim.lsp.buf.references, { buffer = bufnr, desc = "Find references" })
+                    vim.keymap.set("n", "K", vim.lsp.buf.hover, { buffer = bufnr, desc = "Hover info" })
+                    vim.keymap.set("n", "<leader>d", function()
+                        vim.diagnostic.open_float(nil, { focusable = true })
+                    end, { buffer = bufnr, desc = "Show diagnostic" })
+                end
+                vim.lsp.config(server, server_opts)
+                vim.lsp.enable(server)
             end
         end,
     },
-    {
-        "hrsh7th/nvim-cmp",
-        dependencies = {
-            "hrsh7th/cmp-nvim-lsp",
-        },
-        config = function()
-            local cmp = require("cmp")
-            cmp.setup({
-                mapping = {
-                    ["<C-n>"]     = cmp.mapping.select_next_item(),
-                    ["<C-p>"]     = cmp.mapping.select_prev_item(),
-                    ["<CR>"]      = cmp.mapping.confirm({ select = true }),
-                    ["<C-Space>"] = cmp.mapping.complete(),
-                },
-                sources = {
-                    { name = "nvim_lsp" },
-                },
-                completion = {
-                    autocomplete = false,
-                },
-            })
-        end,
-    },
-    {
-        "echasnovski/mini.pick",
-        version = false,
-        config = function()
-            require("mini.pick").setup({
-                window = {
-                    config = {
-                        anchor = 'NW',
-                        col = math.floor(vim.o.columns * 0.05),
-                        width = math.floor(vim.o.columns * 0.90),
-                        row = math.floor(vim.o.lines * 0.05),
-                        height = math.floor(vim.o.lines * 0.80),
-                    },
-                },
-            })
-            vim.keymap.set("n", "<leader>ff", MiniPick.builtin.files, { desc = "Find files" })
-            vim.keymap.set("n", "<leader>fg", MiniPick.builtin.grep_live, { desc = "Live grep" })
-        end,
-    },
+    -- {
+    --     "hrsh7th/nvim-cmp",
+    --     dependencies = {
+    --         "hrsh7th/cmp-nvim-lsp",
+    --     },
+    --     config = function()
+    --         local cmp = require("cmp")
+    --         cmp.setup({
+    --             mapping = {
+    --                 ["<C-n>"]     = cmp.mapping.select_next_item(),
+    --                 ["<C-p>"]     = cmp.mapping.select_prev_item(),
+    --                 ["<CR>"]      = cmp.mapping.confirm({ select = true }),
+    --                 ["<C-Space>"] = cmp.mapping.complete(),
+    --             },
+    --             sources = {
+    --                 { name = "nvim_lsp" },
+    --             },
+    --             completion = {
+    --                 autocomplete = false,
+    --             },
+    --         })
+    --     end,
+    -- },
+    --      {
+    --          "echasnovski/mini.pick",
+    --          version = false,
+    --          config = function()
+    --              require("mini.pick").setup({
+    --                  window = {
+    --                      config = {
+    --                          anchor = 'NW',
+    --                          col = math.floor(vim.o.columns * 0.05),
+    --                          width = math.floor(vim.o.columns * 0.90),
+    --                          row = math.floor(vim.o.lines * 0.05),
+    --                          height = math.floor(vim.o.lines * 0.80),
+    --                      },
+    --                  },
+    --              })
+    --              vim.keymap.set("n", "<leader>ff", MiniPick.builtin.files, { desc = "Find files" })
+    --              vim.keymap.set("n", "<leader>fg", MiniPick.builtin.grep_live, { desc = "Live grep" })
+    --          end,
+    --      },
 })
