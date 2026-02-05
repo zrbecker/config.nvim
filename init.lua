@@ -146,6 +146,9 @@ require("lazy").setup({
 		dependencies = {
 			"hrsh7th/nvim-cmp",
 			"hrsh7th/cmp-nvim-lsp",
+
+			"mason-org/mason.nvim",
+			"mason-org/mason-lspconfig.nvim",
 		},
 		opts = {
 			diagnostics = { virtual_text = false, underline = false },
@@ -156,6 +159,11 @@ require("lazy").setup({
 			},
 		},
 		config = function(_, opts)
+			require("mason").setup()
+			require("mason-lspconfig").setup({
+				ensure_installed = vim.tbl_keys(opts.servers),
+			})
+
 			vim.diagnostic.config(opts.diagnostics)
 			vim.api.nvim_create_autocmd("DiagnosticChanged", {
 				callback = function()
