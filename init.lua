@@ -233,6 +233,7 @@ require("lazy").setup({
 		build = ":TSUpdate",
 		event = { "BufReadPost", "BufNewFile" },
 		opts = {
+			ensure_installed = { "lua", "go", "rust", "vim", "vimdoc" },
 			auto_install = true,
 			highlight = { enable = true },
 			indent = { enable = true },
