@@ -1,6 +1,6 @@
 vim.g.mapleader = " "
 vim.g.maplocalleader = " "
-vimx.g.zig_fmt_autosave = false -- Disable builtin zig autoformatter
+vim.g.zig_fmt_autosave = false -- Disable builtin zig autoformatter
 
 -- Disable line wrapping
 vim.opt.wrap = false
