@@ -159,7 +159,15 @@ require("lazy").setup({
 			servers = {
 				gopls = {},
 				rust_analyzer = {},
-				lua_ls = {},
+				lua_ls = {
+					settings = {
+						Lua = {
+							diagnostics = {
+								globals = { "vim" },
+							},
+						},
+					},
+				},
 			},
 		},
 		config = function(_, opts)
@@ -175,18 +183,35 @@ require("lazy").setup({
 				end,
 			})
 
+			vim.api.nvim_create_autocmd("LspAttach", {
+				callback = function(args)
+					local client = vim.lsp.get_client_by_id(args.data.client_id)
+					if not client then
+						return
+					end
+
+					local map = function(keys, func, desc)
+						vim.keymap.set("n", keys, func, { buffer = args.buf, desc = "LSP: " .. desc })
+					end
+
+					map("<leader>ld", vim.lsp.buf.definition, "Go to definition")
+					map("<leader>lr", function()
+						require("mini.extra").pickers.lsp({ scope = "references" })
+					end, "Find references")
+					map("<leader>ln", vim.lsp.buf.rename, "Rename")
+					map("<leader>la", vim.lsp.buf.code_action, "Code action")
+					map("<leader>lh", vim.lsp.buf.hover, "Hover info")
+					map("<leader>li", vim.lsp.buf.implementation, "Go to implementation")
+					map("<leader>le", function()
+						vim.diagnostic.open_float(nil, { focusable = true })
+					end, "Show diagnostic")
+				end,
+			})
+
 			local capabilities = require("cmp_nvim_lsp").default_capabilities()
 			for server, server_opts in pairs(opts.servers) do
 				server_opts.capabilities = capabilities
-				server_opts.on_attach = function(_, bufnr)
-					vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = bufnr, desc = "Go to definition" })
-					vim.keymap.set("n", "gr", vim.lsp.buf.references, { buffer = bufnr, desc = "Find references" })
-					vim.keymap.set("n", "K", vim.lsp.buf.hover, { buffer = bufnr, desc = "Hover info" })
-					vim.keymap.set("n", "<leader>d", function()
-						vim.diagnostic.open_float(nil, { focusable = true })
-					end, { buffer = bufnr, desc = "Show diagnostic" })
-				end
-				vim.lsp.config(server, server_opts)
+				vim.lsp.config[server] = server_opts
 				vim.lsp.enable(server)
 			end
 		end,
@@ -222,6 +247,7 @@ require("lazy").setup({
 					{ name = "nvim_lsp" },
 				},
 				completion = {
+					-- disable completion because we use a keymap to trigger it
 					autocomplete = false,
 				},
 			})
@@ -240,6 +266,10 @@ require("lazy").setup({
 		},
 	},
 	{
+		"echasnovski/mini.extra",
+		version = false,
+	},
+	{
 		"echasnovski/mini.pick",
 		version = false,
 		config = function()
@@ -248,11 +278,10 @@ require("lazy").setup({
 			pick.setup({
 				window = {
 					config = {
-						anchor = "NW",
-						col = math.floor(vim.o.columns * 0.05),
-						width = math.floor(vim.o.columns * 0.90),
-						row = math.floor(vim.o.lines * 0.05),
-						height = math.floor(vim.o.lines * 0.80),
+						width = math.floor(vim.o.columns * 1.0),
+						height = math.floor(vim.o.lines * 1.0),
+						row = math.floor(vim.o.lines * 0.0),
+						col = math.floor(vim.o.columns * 0.0),
 					},
 				},
 			})
