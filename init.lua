@@ -339,4 +339,143 @@ require("lazy").setup({
 			vim.keymap.set("n", "<leader>fg", pick.builtin.grep_live, { desc = "Live grep" })
 		end,
 	},
+	{
+		"mfussenegger/nvim-dap",
+		dependencies = {
+			"rcarriga/nvim-dap-ui",
+			"nvim-neotest/nvim-nio",
+			"williamboman/mason.nvim",
+			"jay-babu/mason-nvim-dap.nvim",
+			"leoluz/nvim-dap-go",
+			"mfussenegger/nvim-dap-python",
+		},
+		config = function()
+			local dap = require("dap")
+			local dapui = require("dapui")
+
+			require("mason-nvim-dap").setup({
+				automatic_installation = true,
+				handlers = {},
+				ensure_installed = {
+					"delve",
+					"codelldb",
+					"python",
+				},
+			})
+
+			-- Basic DAP UI setup
+			dapui.setup()
+
+			-- Manual setup for codelldb to ensure correct path
+			dap.adapters.codelldb = {
+				type = "server",
+				port = "${port}",
+				executable = {
+					command = vim.fn.stdpath("data") .. "/mason/packages/codelldb/extension/adapter/codelldb",
+					args = { "--port", "${port}" },
+				},
+			}
+
+			-- Open UI automatically when debugging starts
+			dap.listeners.after.event_initialized["dapui_config"] = dapui.open
+
+			-- Go setup
+			require("dap-go").setup()
+
+			-- Python setup
+			local python_path = vim.fn.stdpath("data") .. "/mason/packages/debugpy/venv/bin/python"
+			require("dap-python").setup(python_path)
+
+			-- Rust setup (codelldb) via Mason
+			local last_rust_exe = nil
+			dap.configurations.rust = {
+				{
+					name = "Launch file",
+					type = "codelldb",
+					request = "launch",
+					program = function()
+						return coroutine.create(function(dap_run_co)
+							local cwd = vim.fn.getcwd()
+							local cmd = "cargo metadata --no-deps --format-version 1"
+							local handle = io.popen(cmd)
+							local result = ""
+							if handle then
+								result = handle:read("*a")
+								handle:close()
+							end
+
+							local executables = {}
+							local target_dir = cwd .. "/target"
+
+							if result and result ~= "" then
+								local ok, parsed = pcall(vim.json.decode, result)
+								if ok and parsed then
+									target_dir = parsed.target_directory
+									if parsed.packages then
+										for _, package in ipairs(parsed.packages) do
+											for _, target in ipairs(package.targets) do
+												if vim.tbl_contains(target.kind, "bin") then
+													table.insert(executables, target_dir .. "/debug/" .. target.name)
+												end
+											end
+										end
+									end
+								end
+							end
+
+							if #executables == 0 then
+								vim.ui.input({
+									prompt = "Path to executable: ",
+									default = target_dir .. "/debug/",
+									completion = "file",
+								}, function(input)
+									coroutine.resume(dap_run_co, input)
+								end)
+							else
+								table.sort(executables, function(a, b)
+									if a == last_rust_exe then
+										return true
+									end
+									if b == last_rust_exe then
+										return false
+									end
+									return a < b
+								end)
+
+								vim.ui.select(executables, {
+									prompt = "Select executable to debug:",
+									format_item = function(item)
+										if item == last_rust_exe then
+											return item .. " (Last Used)"
+										end
+										return item
+									end,
+								}, function(choice)
+									if choice then
+										last_rust_exe = choice
+										coroutine.resume(dap_run_co, choice)
+									else
+										coroutine.resume(dap_run_co, nil)
+									end
+								end)
+							end
+						end)
+					end,
+					cwd = "${workspaceFolder}",
+					stopOnEntry = false,
+				},
+			}
+
+			-- Keymaps
+			vim.keymap.set("n", "<F5>", dap.continue, { desc = "Debug: Start/Continue" })
+			vim.keymap.set("n", "<F1>", dap.step_into, { desc = "Debug: Step Into" })
+			vim.keymap.set("n", "<F2>", dap.step_over, { desc = "Debug: Step Over" })
+			vim.keymap.set("n", "<F3>", dap.step_out, { desc = "Debug: Step Out" })
+			vim.keymap.set("n", "<leader>db", dap.toggle_breakpoint, { desc = "Debug: Toggle Breakpoint" })
+			vim.keymap.set("n", "<leader>dB", function()
+				dap.set_breakpoint(vim.fn.input("Breakpoint condition: "))
+			end, { desc = "Debug: Set Breakpoint with Condition" })
+			vim.keymap.set("n", "<leader>du", dapui.toggle, { desc = "Debug: Toggle UI" })
+		end,
+	},
 })
