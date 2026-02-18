@@ -266,6 +266,55 @@ require("lazy").setup({
 		},
 	},
 	{
+		"NeogitOrg/neogit",
+		dependencies = {
+			"nvim-lua/plenary.nvim",
+			"sindrets/diffview.nvim",
+			"echasnovski/mini.pick",
+		},
+		config = function()
+			local neogit = require("neogit")
+			neogit.setup({})
+			vim.keymap.set("n", "<leader>gg", neogit.open, { desc = "Open Neogit" })
+		end,
+	},
+	{
+		"echasnovski/mini.diff",
+		version = false,
+		config = function()
+			local diff = require("mini.diff")
+			diff.setup({
+				view = {
+					style = "sign",
+					signs = { add = "┃", change = "┃", delete = "_" },
+				},
+			})
+
+			vim.keymap.set("n", "<leader>gd", diff.toggle_overlay, { desc = "Toggle diff overlay" })
+		end,
+	},
+	{
+		"echasnovski/mini-git",
+		version = false,
+		config = function()
+			require("mini.git").setup()
+
+			vim.keymap.set("n", "<leader>gc", function()
+				require("mini.extra").pickers.git_commits()
+			end, { desc = "Browse Git commits" })
+
+			vim.keymap.set("n", "<leader>gh", function()
+				local path = vim.fn.expand("%")
+				if path == "" then
+					vim.notify("No file to show history for")
+					return
+				end
+				-- Use mini.git's :Git command to show log for current file
+				vim.cmd("Git log -- " .. path)
+			end, { desc = "Show file history" })
+		end,
+	},
+	{
 		"echasnovski/mini.extra",
 		version = false,
 	},
