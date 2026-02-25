@@ -153,12 +153,14 @@ require("lazy").setup({
 
 			"mason-org/mason.nvim",
 			"mason-org/mason-lspconfig.nvim",
+			"WhoIsSethDaniel/mason-tool-installer.nvim",
 		},
 		opts = {
 			diagnostics = { virtual_text = false, underline = false },
 			servers = {
 				gopls = {},
 				rust_analyzer = {},
+				pyright = {},
 				lua_ls = {
 					settings = {
 						Lua = {
@@ -168,12 +170,35 @@ require("lazy").setup({
 						},
 					},
 				},
+				ts_ls = {},
+				eslint = {
+					on_attach = function(client, bufnr)
+						-- Disable eslint formatting; prettier (conform.nvim) owns that
+						client.server_capabilities.documentFormattingProvider = false
+						vim.api.nvim_buf_create_user_command(bufnr, "LspEslintFixAll", function()
+							client:request_sync("workspace/executeCommand", {
+								command = "eslint.applyAllFixes",
+								arguments = { {
+									uri = vim.uri_from_bufnr(bufnr),
+									version = vim.lsp.util.buf_versions[bufnr],
+								} },
+							}, nil, bufnr)
+						end, {})
+						vim.api.nvim_create_autocmd("BufWritePre", {
+							buffer = bufnr,
+							command = "LspEslintFixAll",
+						})
+					end,
+				},
 			},
 		},
 		config = function(_, opts)
 			require("mason").setup()
 			require("mason-lspconfig").setup({
 				ensure_installed = vim.tbl_keys(opts.servers),
+			})
+			require("mason-tool-installer").setup({
+				ensure_installed = { "prettierd" },
 			})
 
 			vim.diagnostic.config(opts.diagnostics)
@@ -224,9 +249,13 @@ require("lazy").setup({
 				lsp_fallback = true,
 				timeout_ms = 500,
 			},
-			formatters_by_ft = {
-				lua = { "stylua" },
-			},
+		formatters_by_ft = {
+			lua = { "stylua" },
+			javascript = { "prettierd", "prettier", stop_after_first = true },
+			javascriptreact = { "prettierd", "prettier", stop_after_first = true },
+			typescript = { "prettierd", "prettier", stop_after_first = true },
+			typescriptreact = { "prettierd", "prettier", stop_after_first = true },
+		},
 		},
 	},
 	{
